@@ -6,3 +6,4 @@ run: all
 
 host: all
 	mpirun --hostfile host app input.txt
+

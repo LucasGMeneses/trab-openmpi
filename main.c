@@ -19,7 +19,7 @@ int comparetor(long long int a, long long int b){
     long long int mask2 = mask1;
     long long int mask3;
     
-    printf("\n%lld size:%d\n", mask2);
+    printf("\n%lld\n", mask2);
 
 }
 
