@@ -4,7 +4,7 @@
 #include<time.h>
 int main(int argc, char *argv[]){
     FILE *file;
-    int n[] = {100000, 1000000, 10000000};
+    int n[] = {100,100000, 1000000, 10000000};
     int k = 0;
     for (int i = 1; i < argc; i++){
         file = fopen(argv[i], "w");
