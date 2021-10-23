@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include<time.h>
+
 int main(int argc, char *argv[]){
     FILE *file;
     int n[] = {100,100000, 1000000, 10000000};
@@ -12,7 +13,7 @@ int main(int argc, char *argv[]){
         srand(time(NULL));
         
         for (int j = 0; j < n[k]; j++){
-            fprintf(file, "%lld ", (long long int) rand() % n[k]);
+            fprintf(file, "%lld ", (long long int) rand() % 500);
         }
         
         k++;
