@@ -70,21 +70,6 @@ int comparetor(const void *a, const void *b)
     }
 }
 
-/* int64 *addNum(int64 *v, int n, int64 num)
-{
-    if (n == 0 && v == NULL)
-    {
-        v = (int64 *)malloc(1 * sizeof(int64));
-        *v = num;
-    }
-    else
-    {
-        v = (int64 *)realloc(v, sizeof(int64));
-        v[n] = num;
-    }
-    return v;
-} */
-
 /* realiza a funcao compara-troca */
 void compareSplit(int64 nlocal, int64 *vlocal, int64 *rvlocal, int keepsmall)
 {
@@ -132,6 +117,7 @@ void oddEvenSort(int64 *vlocal, int64 nlocal, int myrank, int npes)
     MPI_Status status;
 
     qsort(vlocal, nlocal, sizeof(int64), comparetor);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     if (myrank % 2 == 0)
     {
@@ -164,7 +150,9 @@ void oddEvenSort(int64 *vlocal, int64 nlocal, int myrank, int npes)
         compareSplit(nlocal, vlocal, vlocalrec, myrank < status.MPI_SOURCE);
     }
 }
-
+/* Qsort paralelo  
+    obs.: so funciona para primeira iteração
+*/
 void qsortParallel(int64 *v, int64 *vlocal, int64 nlocal, int myrank, int npes)
 {
     int ln, un = 0;
@@ -179,9 +167,9 @@ void qsortParallel(int64 *v, int64 *vlocal, int64 nlocal, int myrank, int npes)
     llocal = (int64 *)malloc(nlocal * sizeof(int64));
     ulocal = (int64 *)malloc(nlocal * sizeof(int64));
 
-    pivolt = vlocal[0];
-
-    MPI_Bcast(&pivolt, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+    pivolt = vlocal[0];                                          /* escolhe o pivolt */
+    MPI_Bcast(&pivolt, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD); /* comunica o pivolt para todos os processadores */
+    /* separa o vlocal em dois vetores: l(menores q pivolt) u(maiores q pivolt) */
     int i;
     for (i = 0; i < nlocal; i++)
     {
@@ -197,17 +185,9 @@ void qsortParallel(int64 *v, int64 *vlocal, int64 nlocal, int myrank, int npes)
         }
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (myrank == 1)
-    {
-        printf("pvlt: %lld\n", pivolt);
-        printv(ulocal, un);
-        printf("\n\n");
-        printv(llocal, ln);
-    }
-
+    /* troca de vetores l u entre os processadores paralelos*/
     int temp;
-    if (myrank < (npes / 2))
+    if (myrank < (npes / 2)) /* fica com os menores valores ref ao pivolt*/
     {
         temp = abs((npes / 2) + myrank);
 
@@ -216,22 +196,13 @@ void qsortParallel(int64 *v, int64 *vlocal, int64 nlocal, int myrank, int npes)
         free(vlocal);
         vlocal = llocal;
     }
-    else
+    else /* fica com os maiores valores ref ao pivolt */
     {
         temp = abs((npes / 2) - myrank);
         MPI_Sendrecv(ulocal, un, MPI_INT, temp, 1, vrecv, nlocal, MPI_INT, temp, 1, MPI_COMM_WORLD, &status);
         compareSplit(nlocal, ulocal, vrecv, myrank < status.MPI_SOURCE);
         free(vlocal);
         vlocal = ulocal;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (myrank == 1)
-    {
-        printf("pvlt: %lld\n", pivolt);
-        printv(vlocal, nlocal);
-        printf("\n");
-        printv(vrecv, nlocal);
-        printf("\n\n");
     }
 }
 
@@ -297,37 +268,34 @@ int main(int argc, char *argv[])
 
     MPI_Barrier(MPI_COMM_WORLD);
     /* faz uma copia do vetor local em cada processador */
-    int i;
-    int64 vlocalcopy[nlocal]; /* copia do vetor local */
-    for (i = 0; i < nlocal; i++)
-    {
-        vlocalcopy[i] = vlocal[i];
-    }
-    /* executando o qsort sequencial *
+
+    /* executando o qsort sequencial */
     if (myrank == 0)
     {
         stime = MPI_Wtime();
         qsort(v, n, sizeof(int64), comparetor);
         etime = MPI_Wtime();
+        printv(v,n);
         printf("tempo:%lf\n", etime - stime);
-        printv(v, n);
         printf("\n\n");
         free(v);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    /* executando o oddEvenSort *
+    /* executando o oddEvenSort */
     stime = MPI_Wtime();
     oddEvenSort(vlocal, nlocal, myrank, npes);
     etime = MPI_Wtime();
+    printv(vlocal, nlocal);
     printf("tempo:%lf\n", etime - stime);
-    printv(vlocal, nlocal); */
+
+    
 
     MPI_Barrier(MPI_COMM_WORLD);
-
+    /*  executando o qsorte paralelo*/
     qsortParallel(v, vlocal, nlocal, myrank, npes);
-
+    
     MPI_Finalize();
 
     /* free(vlocal); */
